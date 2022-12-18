@@ -6,9 +6,9 @@ from xmlrpc.client import Boolean
 
 class User(BaseModel):
     id: str
-    passwrd: str
+    password: str
     name: str
     surname: str
     age: int
-    weight: int
-    height: int
+    weight: int = 0
+    height: int = 0
