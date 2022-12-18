@@ -11,4 +11,8 @@ class User(BaseModel):
     surname: str
     age: int
     weight: int = 0
-    height: int = 0
+    height: int = 0 
+
+class Credentials(BaseModel):
+    id: str
+    password: str
