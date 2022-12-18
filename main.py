@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from fastapi.responses import Response
+from fastapi.responses import StreamingResponse
 
 from models import *
 
@@ -23,7 +23,6 @@ origins = [
     "*"
 ]
 
-
 users = {"string": User(id="string", password="pollagorda69", name="pol", surname="escolar", age=12)}
 
 
@@ -31,7 +30,6 @@ users = {"string": User(id="string", password="pollagorda69", name="pol", surnam
 async def register(user: User):
     users[user.id] = user
     return user
-
 
 
 @app.post("/login/")
@@ -42,6 +40,7 @@ async def login(credentials: Credentials):
         return False
     return True
 
+
 @app.post("/user/")
 async def edit_user(user: User):
     if user.id not in users.keys():
@@ -49,14 +48,17 @@ async def edit_user(user: User):
     users[user.id] = user
     return users
 
+
 @app.get("/users/{userid}/")
 async def get_user(userid):
     return users[userid]
+
 
 def turn_resp_to_mat(resp):
     ys = json.loads(resp.text)['ecgReadings'][0]['waveformSamples']
     dic = {'val': ys}
     sciio.savemat('tmp.mat', dic)
+
 
 @app.post("/ecg/{userid}/")
 async def get_ecg(userid):
@@ -66,6 +68,7 @@ async def get_ecg(userid):
     turn_resp_to_mat(resp)
     return 0
 
+
 def plot_ecg(resp):
     plt.figure()
     ys = json.loads(resp.text)['ecgReadings'][4]['waveformSamples']
@@ -74,17 +77,14 @@ def plot_ecg(resp):
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
     buf.seek(0)
+    print("HA")
     return buf
 
-@app.post("/egs/{userid}/",responses = {
-        200: {
-            "content": {"image/png": {}}
-        }
-    },response_class=Response
-          )
-async def egs_image(userid):
+
+@app.get("/egs/{userid}/")
+async def egs_image(userid: str, ):
     resp = requests.get(f"{HOST}/1/user/-/ecg/list.json?beforeDate=2022-09-28&sort=asc&limit=10&offset=0", headers={
         "Authorization": f"Bearer {BEARER_TOKEN}"
     })
     image_buf = plot_ecg(resp)
-    return Response(content=image_buf, media_type="image/png")
+    return StreamingResponse(content=image_buf, media_type="image/png")
