@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import json
 import requests
-import scipy.io as io
+import scipy.io as sciio
+import io
 
 import requests
 
@@ -55,7 +56,7 @@ async def get_user(userid):
 def turn_resp_to_mat(resp):
     ys = json.loads(resp.text)['ecgReadings'][0]['waveformSamples']
     dic = {'val': ys}
-    io.savemat('tmp.mat', dic)
+    sciio.savemat('tmp.mat', dic)
 
 @app.post("/ecg/{userid}/")
 async def get_ecg(userid):
