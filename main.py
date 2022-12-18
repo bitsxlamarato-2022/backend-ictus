@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import Response
 
 from models import *
 
@@ -63,3 +64,26 @@ async def get_ecg(userid):
     })
     turn_resp_to_mat(resp)
     return 0
+
+def plot_ecg(resp):
+    plt.figure()
+    ys = json.loads(resp.text)['ecgReadings'][4]['waveformSamples']
+    xs = [x for x in range(len(ys))]
+    plt.plot(xs, ys)
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    return buf
+
+@app.post("/egs/{userid}/",responses = {
+        200: {
+            "content": {"image/png": {}}
+        }
+    },response_class=Response
+          )
+async def egs_image(userid):
+    resp = requests.get(f"{HOST}/1/user/-/ecg/list.json?beforeDate=2022-09-28&sort=asc&limit=10&offset=0", headers={
+        "Authorization": f"Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyMzkyM0siLCJzdWIiOiJCM0tZSEgiLCJpc3MiOiJGaXRiaXQiLCJ0eXAiOiJhY2Nlc3NfdG9rZW4iLCJzY29wZXMiOiJ3aHIgd3BybyB3bnV0IHdzbGUgd2VjZyB3c29jIHdhY3Qgd294eSB3dGVtIHd3ZWkgd2NmIHdzZXQgd2xvYyB3cmVzIiwiZXhwIjoxNjcxMzUxMTQzLCJpYXQiOjE2NzEzMjIzNDN9.cW6yh70CjhJX1RATtssz1u2YAIoNNbKXCiyTC2jHJ3I"
+    })
+    image_buf = plot_ecg(resp)
+    return Response(content=image_buf, media_type="image/png")
