@@ -12,6 +12,8 @@ import io
 
 import requests
 
+import os
+
 CLIENT_ID = '23923K'
 CLIENT_SECRET = 'e75bf5bf8e57aac3689717bad636cb97'
 HOST = "https://api.fitbit.com"
@@ -23,6 +25,7 @@ origins = [
     "*"
 ]
 
+
 users = {"string": User(id="string", password="pollagorda69", name="pol", surname="escolar", age=12)}
 
 
@@ -30,6 +33,7 @@ users = {"string": User(id="string", password="pollagorda69", name="pol", surnam
 async def register(user: User):
     users[user.id] = user
     return user
+
 
 
 @app.post("/login/")
@@ -40,7 +44,6 @@ async def login(credentials: Credentials):
         return False
     return True
 
-
 @app.post("/user/")
 async def edit_user(user: User):
     if user.id not in users.keys():
@@ -48,43 +51,50 @@ async def edit_user(user: User):
     users[user.id] = user
     return users
 
-
 @app.get("/users/{userid}/")
 async def get_user(userid):
     return users[userid]
 
-
-def turn_resp_to_mat(resp):
-    ys = json.loads(resp.text)['ecgReadings'][0]['waveformSamples']
+def turn_resp_to_mat(resp, index):
+    ys = json.loads(resp.text)['ecgReadings'][index]['waveformSamples']
     dic = {'val': ys}
     sciio.savemat('tmp.mat', dic)
 
-
-@app.post("/ecg/{userid}/")
-async def get_ecg(userid):
-    resp = requests.get(f"{HOST}/1/user/-/ecg/list.json?beforeDate=2022-09-28&sort=asc&limit=10&offset=0", headers={
-        "Authorization": f"Bearer {BEARER_TOKEN}"
-    })
-    turn_resp_to_mat(resp)
-    return 0
-
-
-def plot_ecg(resp):
+def plot_ecg(resp, index):
     plt.figure()
-    ys = json.loads(resp.text)['ecgReadings'][4]['waveformSamples']
+    ys = json.loads(resp.text)['ecgReadings'][index]['waveformSamples']
     xs = [x for x in range(len(ys))]
     plt.plot(xs, ys)
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
     buf.seek(0)
-    print("HA")
     return buf
 
-
-@app.get("/egs/{userid}/")
-async def egs_image(userid: str, ):
-    resp = requests.get(f"{HOST}/1/user/-/ecg/list.json?beforeDate=2022-09-28&sort=asc&limit=10&offset=0", headers={
+@app.get("/ecg/{userid}/")
+async def ecg_image(userid, beforeDate, index: int):
+    resp = requests.get(f"{HOST}/1/user/-/ecg/list.json?beforeDate={beforeDate}&sort=asc&limit=10&offset=0", headers={
         "Authorization": f"Bearer {BEARER_TOKEN}"
     })
-    image_buf = plot_ecg(resp)
+    image_buf = plot_ecg(resp, index)
     return StreamingResponse(content=image_buf, media_type="image/png")
+
+@app.get("/ecg/{userid}/list/")
+async def get_user(userid, beforeDate):
+    resp = requests.get(f"{HOST}/1/user/-/ecg/list.json?beforeDate={beforeDate}&sort=asc&limit=10&offset=0", headers={
+        "Authorization": f"Bearer {BEARER_TOKEN}"
+    })
+    readings = json.loads(resp.text)['ecgReadings']
+    res = []
+    for i, reading in enumerate(readings):
+        res.append(f"/ecg/{userid}/execute/?beforeDate={beforeDate}&index={i}")
+    return res
+
+@app.get("/ecg/{userid}/execute/")
+async def get_user(userid, beforeDate, index: int):
+    resp = requests.get(f"{HOST}/1/user/-/ecg/list.json?beforeDate={beforeDate}&sort=asc&limit=10&offset=0", headers={
+        "Authorization": f"Bearer {BEARER_TOKEN}"
+    })
+    turn_resp_to_mat(resp, index)
+    os.system()
+    return {"date": beforeDate,
+            "imghref": f"/ecg/{userid}/?beforeDate={beforeDate}&index={index}"}
