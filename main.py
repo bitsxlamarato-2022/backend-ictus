@@ -22,7 +22,7 @@ origins = [
 ]
 
 
-users = {}
+users = {"string": User(id="string", password="pollagorda69", name="pol", surname="escolar", age=12)}
 
 
 @app.post("/register/")
